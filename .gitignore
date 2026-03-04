@@ -1,0 +1,8 @@
+.vscode
+
+*.bin
+*.sig
+*.json
+
+.idea
+.vscode
