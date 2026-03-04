@@ -119,7 +119,20 @@ func main() {
 	// 1. 生成包含远程度量报告的 RA-TLS 证书
 	tlsConfig, err := enclave.CreateAttestationServerTLSConfig()
 	if err != nil {
-		log.Fatalf("生成 RA-TLS 证书失败: %v", err)
+		log.Printf("生成 RA-TLS 证书失败: %v", err)
+		// 如果在模拟模式下由于不支持度量报告而失败，则降级为普通 TLS
+		if os.Getenv("OE_SIMULATION") == "1" {
+			log.Printf("模拟模式：降级为普通 TLS (无远程度量报告)")
+			// 简单生成一个自签名证书用于演示
+			// 在生产环境中，这应该是一个预定义的或者由 CA 签名的证书
+			// 此处为了方便演示，我们使用一个不验证身份的空配置
+			// 注意：这仅用于模拟模式调试
+			tlsConfig = &tls.Config{
+				InsecureSkipVerify: true,
+			}
+		} else {
+			log.Fatalf("无法启动服务：RA-TLS 证书生成失败且不在模拟模式下")
+		}
 	}
 
 	// 启动监听
@@ -134,10 +147,22 @@ func main() {
 	}
 	defer ln.Close()
 
-	tlsLn := tls.NewListener(ln, tlsConfig)
+	var tlsLn net.Listener
+	if tlsConfig != nil && len(tlsConfig.Certificates) > 0 {
+		tlsLn = tls.NewListener(ln, tlsConfig)
+	} else {
+		// 如果没有证书（模拟模式降级），则直接使用普通连接或者包装一个简单的 TLS
+		// 为了保持接口一致，这里可以生成一个临时证书
+		log.Printf("警告：使用未加密或未经验证的连接")
+		tlsLn = ln
+	}
 	defer tlsLn.Close()
 
-	log.Printf("TEE Service running in enclave on :%s (RA-TLS enabled)\n", port)
+	if os.Getenv("OE_SIMULATION") == "1" {
+		log.Printf("TEE Service running in simulation mode on :%s\n", port)
+	} else {
+		log.Printf("TEE Service running in enclave on :%s (RA-TLS enabled)\n", port)
+	}
 
 	for {
 		conn, err := tlsLn.Accept()
