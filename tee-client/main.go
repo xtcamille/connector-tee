@@ -7,6 +7,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/edgelesssys/ego/enclave"
 	"github.com/xtcamille/connector-tee/api"
 )
 
@@ -15,8 +16,8 @@ func main() {
 
 	// 使用平台相关的 TLS 配置
 
-	// tlsConfig := enclave.CreateAttestationClientTLSConfig(nil)
-	tlsConfig := GetTLSConfig()
+	tlsConfig := enclave.CreateAttestationClientTLSConfig(nil)
+	// tlsConfig := GetTLSConfig()
 
 	// 启动地址
 	addr := os.Getenv("SERVER_ADDR")
