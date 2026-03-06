@@ -8,29 +8,32 @@ CLIENT_BIN = $(CLIENT_DIR)/tee-client
 ENCLAVE_JSON = $(SERVER_DIR)/enclave.json
 
 # Default target
-all: build sign
+all: build
 
-# Build the server for SGX using ego-go
+# Build the server for Occlum using standard go build
 build-server:
-	cd $(SERVER_DIR) && ego-go build -o tee-server main.go
+	go build -o $(SERVER_BIN) $(SERVER_DIR)/main.go
 
 # Build the client
 build-client:
-	cd $(CLIENT_DIR) && go build -o tee-client main.go
+	go build -o $(CLIENT_BIN) $(CLIENT_DIR)/main.go
 
 build: build-server build-client
 
-# Sign the enclave
-sign: build-server
-	cd $(SERVER_DIR) && ego sign tee-server
+# Occlum specific targets
+occlum-init:
+	occlum init
 
-# Run the server in enclave
-run-server: sign
-	cd $(SERVER_DIR) && ego run tee-server
+occlum-build: build-server
+	occlum build
+
+run-server: occlum-build
+	occlum run /bin/tee-server
 
 # Run the client
 run-client:
 	cd $(CLIENT_DIR) && ./tee-client
 
 clean:
-	rm -f $(SERVER_BIN) $(CLIENT_BIN) $(SERVER_DIR)/tee-server.sig
+	rm -f $(SERVER_BIN) $(CLIENT_BIN)
+	rm -rf occlum_instance

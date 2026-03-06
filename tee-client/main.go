@@ -7,17 +7,19 @@ import (
 	"log"
 	"os"
 
-	"github.com/edgelesssys/ego/enclave"
 	"github.com/xtcamille/connector-tee/api"
 )
 
 func main() {
 	// 1. 建立与服务器的 TLS 连接
 
-	// 使用平台相关的 TLS 配置
+	// 在 Occlum 环境下，如果是 RA-TLS，通常需要验证服务器的证明。
+	// 这里我们使用标准 TLS 配置。如果需要跳过验证（仅用于开发）或提供根 CA。
 
-	tlsConfig := enclave.CreateAttestationClientTLSConfig(nil)
-	// tlsConfig := GetTLSConfig()
+	insecure := os.Getenv("INSECURE") == "1"
+	tlsConfig := &tls.Config{
+		InsecureSkipVerify: insecure,
+	}
 
 	// 启动地址
 	addr := os.Getenv("SERVER_ADDR")
@@ -31,7 +33,11 @@ func main() {
 	}
 	defer conn.Close()
 
-	fmt.Println("Enclave connection established and verified via RA-TLS.")
+	if insecure {
+		fmt.Println("Connection established (Insecure - verification skipped).")
+	} else {
+		fmt.Println("Connection established (TLS verified).")
+	}
 
 	// 2. 构造请求
 	code := `
